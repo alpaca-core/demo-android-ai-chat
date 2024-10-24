@@ -9,8 +9,6 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.net.Uri;
 import android.util.Log;
-import android.widget.TextView;
-import android.view.View;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -19,9 +17,6 @@ import android.database.Cursor;
 import android.widget.Toast;
 
 import java.io.File;
-import java.util.Map;
-
-import com.alpacacore.*;
 
 public class MainActivity extends Activity {
     private static final String TAG = "MainActivity";
@@ -56,24 +51,9 @@ public class MainActivity extends Activity {
     }
 
     private void onAssetReady(String path) {
-        TextView tv = (TextView)findViewById(R.id.main_text);
-        //tv.setText("Adder result: " + Adder.add(43, 33));
-
-        ModelDesc desc = new ModelDesc(
-                "llama.cpp",
-                new ModelDesc.AssetInfo[]{new ModelDesc.AssetInfo(path, ""), },
-                "gpt2");
-        Model model = AlpacaCore.createModel(desc, null, null);
-        Instance instance = model.createInstance("general", null);
-        Map result = (Map)instance.runOp("run",
-                Map.of(
-                        "prompt", "To get to the Moon",
-                        "max_tokens", 20
-                ),
-                null);
-        String opResult = (String)result.get("result");
-
-        tv.setText("Dummy result: " + opResult);
+        Intent intent = new Intent(this, ChatActivity.class);
+        intent.putExtra("assetPath", path);
+        startActivity(intent);
     }
 
     private File getAssetFile() {

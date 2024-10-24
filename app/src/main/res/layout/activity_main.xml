@@ -11,7 +11,7 @@
         android:id="@+id/main_text"
         android:layout_width="148dp"
         android:layout_height="186dp"
-        android:text="Hello World!"
+        android:text="Downloading assets..."
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
