@@ -17,13 +17,4 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <Button
-        android:id="@+id/download"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:onClick="onDownload"
-        android:text="Download"
-        tools:layout_editor_absoluteX="155dp"
-        tools:layout_editor_absoluteY="602dp" />
-
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -18,25 +18,51 @@ import android.content.IntentFilter;
 import android.database.Cursor;
 import android.widget.Toast;
 
-
+import java.io.File;
 import java.util.Map;
 
 import com.alpacacore.*;
 
 public class MainActivity extends Activity {
     private static final String TAG = "MainActivity";
-    private long downloadId;
+
+    private static final String assetUrl =
+        //"https://huggingface.co/alpaca-core/ac-test-data-llama/resolve/main/gpt2-117m-q6_k.gguf";
+        "https://huggingface.co/datasets/alpaca-core/ac-test-dataset-dummy/resolve/main/data/hello-world.txt";
+    private final String assetFname;
+
+    private long downloadId = 0L;
+
+    public MainActivity() {
+        super();
+        assetFname = assetUrl.substring(assetUrl.lastIndexOf('/') + 1);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), RECEIVER_EXPORTED);
 
+        File assetFile = getAssetFile();
+        if (assetFile.exists()) {
+            Log.i(TAG, "Asset exists at: " + assetFile);
+            onAssetReady(assetFile.getAbsolutePath());
+        }
+        else {
+            Log.i(TAG, "Asset not found. Downloading");
+            downloadAsset();
+            registerReceiver(onDownloadComplete, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), RECEIVER_EXPORTED);
+        }
+    }
+
+    private void onAssetReady(String path) {
         TextView tv = (TextView)findViewById(R.id.main_text);
         //tv.setText("Adder result: " + Adder.add(43, 33));
 
-        ModelDesc desc = new ModelDesc("dummy", null, "synthetic");
+        ModelDesc desc = new ModelDesc(
+                "dummy",
+                new ModelDesc.AssetInfo[]{new ModelDesc.AssetInfo(path, ""), },
+                "dummy");
         Model model = AlpacaCore.createModel(desc, null, null);
         Instance instance = model.createInstance("general", null);
         Map result = (Map)instance.runOp("run", Map.of("input", new String[]{"a", "b"}), null);
@@ -45,16 +71,19 @@ public class MainActivity extends Activity {
         tv.setText("Dummy result: " + opResult);
     }
 
-    public void onDownload(View v) {
+    private File getAssetFile() {
+        File downloadDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+        return new File(downloadDir, assetFname);
+    }
+
+    private void downloadAsset() {
         Log.i(TAG, "on download");
-        String url = "https://huggingface.co/datasets/alpaca-core/ac-test-dataset-dummy/resolve/main/data/hello-world.txt";
-        String fileName = url.substring(url.lastIndexOf('/') + 1);
 
         // https://developer.android.com/reference/android/app/DownloadManager.Request
-        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url))
+        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(assetUrl))
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
-                .setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, fileName)
-                .setTitle(fileName)
+                .setTitle(assetFname)
+                .setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, assetFname)
                 .setMimeType("application/octet-stream");
 
         DownloadManager dm = (DownloadManager)getSystemService(DOWNLOAD_SERVICE);
@@ -82,11 +111,14 @@ public class MainActivity extends Activity {
                         Log.i(TAG, "Download Complete");
                         Toast.makeText(MainActivity.this, "Download Complete", Toast.LENGTH_SHORT).show();
 
-                        String uriString = c.getString(c.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI));
+                        final String uriString = c.getString(c.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI));
+                        final String path = Uri.parse(uriString).getPath();
+                        assert(path.equals(getAssetFile().getAbsolutePath()));
                         Log.i(TAG, "URI: " + uriString);
+                        onAssetReady(path);
                     } else {
-                        Log.w(TAG, "Download Unsuccessful, Status Code: " + c.getInt(colIndex));
-                        Toast.makeText(MainActivity.this, "Download Unsuccessful", Toast.LENGTH_SHORT).show();
+                        Log.w(TAG, "Download Failed, Status Code: " + c.getInt(colIndex));
+                        Toast.makeText(MainActivity.this, "Download Failed", Toast.LENGTH_SHORT).show();
                     }
                 }
             }
