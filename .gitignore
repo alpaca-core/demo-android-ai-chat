@@ -1,0 +1,13 @@
+# android
+local.properties
+
+# gradle
+.gradle/
+build/
+
+# ides and editors
+.vs/
+.vscode/
+.cxx/
+*.iml
+.idea/

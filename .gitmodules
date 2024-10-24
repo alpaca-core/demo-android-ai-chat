@@ -1,0 +1,3 @@
+[submodule "ac-local"]
+	path = ac-local
+	url = https://github.com/alpaca-core/ac-local.git
