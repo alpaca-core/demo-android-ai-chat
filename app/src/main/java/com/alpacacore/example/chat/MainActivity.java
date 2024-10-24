@@ -27,8 +27,8 @@ public class MainActivity extends Activity {
     private static final String TAG = "MainActivity";
 
     private static final String assetUrl =
-        //"https://huggingface.co/alpaca-core/ac-test-data-llama/resolve/main/gpt2-117m-q6_k.gguf";
-        "https://huggingface.co/datasets/alpaca-core/ac-test-dataset-dummy/resolve/main/data/hello-world.txt";
+        "https://huggingface.co/alpaca-core/ac-test-data-llama/resolve/main/gpt2-117m-q6_k.gguf";
+
     private final String assetFname;
 
     private long downloadId = 0L;
@@ -60,12 +60,17 @@ public class MainActivity extends Activity {
         //tv.setText("Adder result: " + Adder.add(43, 33));
 
         ModelDesc desc = new ModelDesc(
-                "dummy",
+                "llama.cpp",
                 new ModelDesc.AssetInfo[]{new ModelDesc.AssetInfo(path, ""), },
-                "dummy");
+                "gpt2");
         Model model = AlpacaCore.createModel(desc, null, null);
         Instance instance = model.createInstance("general", null);
-        Map result = (Map)instance.runOp("run", Map.of("input", new String[]{"a", "b"}), null);
+        Map result = (Map)instance.runOp("run",
+                Map.of(
+                        "prompt", "To get to the Moon",
+                        "max_tokens", 20
+                ),
+                null);
         String opResult = (String)result.get("result");
 
         tv.setText("Dummy result: " + opResult);
