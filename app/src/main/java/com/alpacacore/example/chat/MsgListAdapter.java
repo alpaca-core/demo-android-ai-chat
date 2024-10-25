@@ -16,7 +16,7 @@ public class MsgListAdapter extends RecyclerView.Adapter {
 
     public void pushMessage(ChatMsg msg) {
         msgList.add(msg);
-        notifyDataSetChanged();
+        notifyItemInserted(msgList.size() - 1);
     }
 
     @Override
