@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
-import android.widget.TextView;
 import android.widget.EditText;
 import android.view.View;
 
