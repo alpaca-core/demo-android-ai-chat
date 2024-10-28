@@ -1,3 +1,6 @@
+// Copyright (c) Alpaca Core
+// SPDX-License-Identifier: MIT
+//
 package com.alpacacore.example.chat
 
 import android.view.LayoutInflater

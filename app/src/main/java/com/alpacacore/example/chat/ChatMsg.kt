@@ -1,3 +1,6 @@
+// Copyright (c) Alpaca Core
+// SPDX-License-Identifier: MIT
+//
 package com.alpacacore.example.chat
 
 data class ChatMsg(var src: Source, var text: String) {
