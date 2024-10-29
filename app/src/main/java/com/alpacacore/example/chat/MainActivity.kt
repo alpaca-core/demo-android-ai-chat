@@ -4,6 +4,7 @@
 package com.alpacacore.example.chat
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.app.DownloadManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -21,7 +22,12 @@ import java.io.File
 class MainActivity : Activity() {
     class ModelData(var name: String, var desc: String, var assetUrl: String) {
         val fileName: String
-        var exists: Boolean = false
+
+        lateinit var file: File
+
+        val availableLocally
+            get() = file.exists()
+
         var downloadId = 0L
 
         init {
@@ -29,8 +35,7 @@ class MainActivity : Activity() {
         }
 
         fun init(downloadDir: File?) {
-            val file = File(downloadDir, fileName)
-            exists = file.exists()
+            file = File(downloadDir, fileName)
         }
     }
 
@@ -63,12 +68,15 @@ class MainActivity : Activity() {
         }
     }
 
-    lateinit var modelListView: ListView;
+    lateinit var modelListView: ListView
     private fun buildModelListView() {
         var list = ArrayList<Map<String, String>>()
         for (m in models) {
-            var name = m.name;
-            if (!m.exists) {
+            var name = m.name
+            if (m.downloadId != 0L) {
+                name += " (download in progress)"
+            }
+            else if (!m.availableLocally) {
                 name += " (needs download)"
             }
             list.add(mapOf(
@@ -82,6 +90,50 @@ class MainActivity : Activity() {
 
         var adapter = SimpleAdapter(this, list, R.layout.model_list_item, from, to)
         modelListView.adapter = adapter
+        adapter.notifyDataSetChanged()
+    }
+
+    private fun selectModel(model: ModelData) {
+        if (model.downloadId != 0L) {
+            Toast.makeText(
+                this,
+                "Dowload of ${model.name} assets is in progress",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+        else if (model.availableLocally) {
+            val intent = Intent(this, ChatActivity::class.java)
+            intent.putExtra("name", model.name)
+            intent.putExtra("desc", model.desc)
+            intent.putExtra("assetPath", model.file.absolutePath)
+            startActivity(intent)
+        }
+        else {
+            AlertDialog.Builder(this)
+                .setMessage("Download assets for ${model.name}?")
+                .setPositiveButton("Download") { dialog, id ->
+                    initiateModelDownload(model)
+                }
+                .setNegativeButton("Cancel") { dialog, id -> }
+                .show()
+        }
+    }
+
+    fun initiateModelDownload(model: ModelData) {
+        assert(!model.availableLocally)
+        assert(model.downloadId == 0L)
+
+        Log.i(TAG, "on download")
+
+        val request = DownloadManager.Request(Uri.parse(model.assetUrl))
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
+            .setTitle(model.fileName)
+            .setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, model.fileName)
+            .setMimeType("application/octet-stream")
+
+        val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+        model.downloadId = dm.enqueue(request) // add download request to the queue
+        buildModelListView() // update model list
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -92,73 +144,42 @@ class MainActivity : Activity() {
         setContentView(R.layout.activity_main)
         modelListView = findViewById<ListView>(R.id.model_list)
         buildModelListView()
+        modelListView.setOnItemClickListener { parent, view, pos, id -> selectModel(models[pos]) }
 
-
-//        val assetFile = getAssetFile();
-//        if (assetFile.exists()) {
-//            Log.i(TAG, "Asset exists at: $assetFile")
-//            onAssetReady(assetFile.absolutePath)
-//        } else {
-//            Log.i(TAG, "Asset not found. Downloading")
-//            downloadAsset()
-//            registerReceiver(
-//                onDownloadComplete,
-//                IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
-//                RECEIVER_EXPORTED
-//            )
-//        }
+        registerReceiver(
+            onDownloadComplete,
+            IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+            RECEIVER_EXPORTED
+        )
     }
 
-    private fun onAssetReady(path: String?) {
-        val intent = Intent(this, ChatActivity::class.java)
-        intent.putExtra("assetPath", path)
-        startActivity(intent)
+    private val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
+
+            val model = models.firstOrNull { it.downloadId == id }
+            if (model == null) return // not our download
+
+            model.downloadId = 0L
+            buildModelListView() // update list view
+
+            val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+            val query = DownloadManager.Query()
+            query.setFilterById(id)
+            val c = dm.query(query)
+            if (c.moveToFirst()) {
+                val colIndex = c.getColumnIndex(DownloadManager.COLUMN_STATUS)
+                if (DownloadManager.STATUS_SUCCESSFUL == c.getInt(colIndex)) {
+                    Log.i(TAG, "Download Complete")
+                    Toast.makeText(this@MainActivity, "Download Complete", Toast.LENGTH_SHORT)
+                        .show()
+                    assert(model.availableLocally)
+                } else {
+                    Log.w(TAG, "Download Failed, Status Code: " + c.getInt(colIndex))
+                    Toast.makeText(this@MainActivity, "Download Failed", Toast.LENGTH_SHORT)
+                        .show()
+                }
+            }
+        }
     }
-
-//    private fun downloadAsset() {
-//        Log.i(TAG, "on download")
-//
-//        val request = DownloadManager.Request(Uri.parse(assetUrl))
-//            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
-//            .setTitle(assetFname)
-//            .setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, assetFname)
-//            .setMimeType("application/octet-stream")
-//
-//        val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
-//        downloadId = dm.enqueue(request) // add download request to the queue
-//    }
-
-//    private val onDownloadComplete: BroadcastReceiver = object : BroadcastReceiver() {
-//        override fun onReceive(context: Context, intent: Intent) {
-//            val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
-//            if (downloadId != id) return; // not our download
-//
-//            Log.i(TAG, "Download ID: $downloadId")
-//
-//            // Get file URI
-//            val dm = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
-//            val query = DownloadManager.Query()
-//            query.setFilterById(downloadId)
-//            val c = dm.query(query)
-//            if (c.moveToFirst()) {
-//                val colIndex = c.getColumnIndex(DownloadManager.COLUMN_STATUS)
-//                if (DownloadManager.STATUS_SUCCESSFUL == c.getInt(colIndex)) {
-//                    Log.i(TAG, "Download Complete")
-//                    Toast.makeText(this@MainActivity, "Download Complete", Toast.LENGTH_SHORT)
-//                        .show()
-//
-//                    val uriString =
-//                        c.getString(c.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI))
-//                    val path = Uri.parse(uriString).path
-//                    assert(path == getAssetFile().getAbsolutePath())
-//                    Log.i(TAG, "URI: $uriString")
-//                    onAssetReady(path)
-//                } else {
-//                    Log.w(TAG, "Download Failed, Status Code: " + c.getInt(colIndex))
-//                    Toast.makeText(this@MainActivity, "Download Failed", Toast.LENGTH_SHORT)
-//                        .show()
-//                }
-//            }
-//        }
-//    }
 }
