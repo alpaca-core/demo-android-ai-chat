@@ -42,17 +42,17 @@ class MainActivity : Activity() {
     private val models = arrayOf(
         ModelData(
             "GPT2 117M",
-            "very fast and very stupid",
+            "131 MB download! Very fast and very stupid.",
             "https://huggingface.co/alpaca-core/ac-test-data-llama/resolve/main/gpt2-117m-q6_k.gguf"
         ),
         ModelData(
             "Tiny LLaMa 1.1B",
-            "good performance, mostly coherent",
+            "904 MB download! Good performance. Mostly coherent",
             "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q6_K.gguf"
         ),
         ModelData(
             "Mistral 7B Instruct",
-            "Very slow. Adequate responses.",
+            "5.6 GB download! Very slow. Adequate responses.",
             "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q6_K.gguf"
         )
     )
